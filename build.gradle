@@ -13,13 +13,15 @@ java {
 
 repositories {
 	mavenCentral()
+	mavenLocal()
 }
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-amqp'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.amqp:spring-rabbit-test'
+	implementation group: 'org.springframework.boot', name: 'spring-boot-starter-activemq', version: '3.1.1'
+//	implementation 'com.github.vectorclock:vectorclock:1.0-SNAPSHOT'
+
 }
 
 tasks.named('test') {
