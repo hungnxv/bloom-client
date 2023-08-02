@@ -14,6 +14,10 @@ java {
 repositories {
 	mavenCentral()
 	mavenLocal()
+	  maven {
+         url 'file://D:/Working/workspace/.m2/repository'
+     }
+
 }
 
 dependencies {

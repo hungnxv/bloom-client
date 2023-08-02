@@ -1,9 +1,9 @@
 package vn.edu.hcmut.nxvhung.bloomclient.rest;
 
+import vn.edu.hcmut.nxvhung.bloomfilter.dto.Message;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.edu.hcmut.nxvhung.bloomclient.sender.BloomSender;
-import vn.edu.hcmut.nxvhung.bloomfilter.common.dto.dto.Message;
 import vn.edu.hcmut.nxvhung.bloomfilter.hash.Hash;
 import vn.edu.hcmut.nxvhung.bloomfilter.impl.Key;
 import vn.edu.hcmut.nxvhung.bloomfilter.impl.MergeableCountingBloomFilter;

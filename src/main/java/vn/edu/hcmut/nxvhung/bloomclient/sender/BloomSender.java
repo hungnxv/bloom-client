@@ -2,12 +2,12 @@ package vn.edu.hcmut.nxvhung.bloomclient.sender;
 
 
 import jakarta.jms.JMSException;
-import vn.edu.hcmut.nxvhung.bloomfilter.common.dto.dto.Message;
 import jakarta.jms.Session;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.core.MessageCreator;
 import org.springframework.stereotype.Component;
+import vn.edu.hcmut.nxvhung.bloomfilter.dto.Message;
 
 @Component
 public class BloomSender {
@@ -23,7 +23,7 @@ public class BloomSender {
 
   public void sendMessage(String destination, final Message message) {
     jmsTemplate.convertAndSend(destination, message);
-    };
+
   }
 
 
