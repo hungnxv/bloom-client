@@ -27,7 +27,7 @@ public class TestController {
     bloomFilter.add(Key.of("0772751097"));
 
 
-    bloomSender.sendMessage("company_A_request", new Message(1, bloomFilter));
+    bloomSender.sendMessage(new Message(1, bloomFilter));
     return "OK";
   }
 
