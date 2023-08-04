@@ -6,6 +6,7 @@ spring:
     user: admin
     password: admin
 
+company.name: companyA
 queue:
-  request: company_A_request
+  request: company_request
   response: company_A_response

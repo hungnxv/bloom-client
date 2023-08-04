@@ -1,5 +1,6 @@
 package vn.edu.hcmut.nxvhung.bloomclient.rest;
 
+import org.springframework.beans.factory.annotation.Value;
 import vn.edu.hcmut.nxvhung.bloomfilter.dto.Message;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +13,8 @@ import vn.edu.hcmut.nxvhung.bloomfilter.impl.MergeableCountingBloomFilter;
 
 public class TestController {
 
+  @Value("${company.name}")
+  private String companyName;
   private BloomSender bloomSender;
 
 
@@ -19,15 +22,16 @@ public class TestController {
     this.bloomSender = bloomSender;
   }
 
+
   @GetMapping("/test")
   public String test() {
-    MergeableCountingBloomFilter bloomFilter = new MergeableCountingBloomFilter(20, 3, Hash.MURMUR_HASH, 4);
-    bloomFilter.add(Key.of("08232832832"));
-    bloomFilter.add(Key.of("08232832822"));
-    bloomFilter.add(Key.of("0772751097"));
+    MergeableCountingBloomFilter bloomFilter = new MergeableCountingBloomFilter(479253, 10, Hash.MURMUR_HASH, 4);
 
 
-    bloomSender.sendMessage(new Message(1, bloomFilter));
+
+    Message message = new Message(1, bloomFilter);
+    message.setCompanyName(companyName);
+    bloomSender.sendMessage(message);
     return "OK";
   }
 
