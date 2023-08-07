@@ -22,9 +22,14 @@ public class BlacklistService {
   private Filterable<Key> mergedBlacklist;
 
   public void loadBlacklist() throws IOException {
-    try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:blacklist.csv").toPath())) {
-      List<String> blacklistSource = reader.lines().skip(1).map(line -> line.replaceAll("\\W", ""))).toList();
-      blacklistSource.forEach(phone -> blacklist.add(Key.of(phone)));
+    Integer count = null;
+    try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:blacklist1.csv").toPath())) {
+      List<String> blacklistSource = reader.lines().skip(1).map(line -> line.replaceAll("\\W", "")).toList();
+      for(int i = 0 ; i < blacklistSource.size() - 1; i++){
+        String phone = blacklistSource.get(i);
+        blacklist.add(Key.of(phone));
+        System.out.println(i + ": " +  phone + " added: ");
+      }
     }
 
 }
@@ -42,5 +47,9 @@ public class BlacklistService {
 
   public synchronized void updateMergedBlacklist(Filterable<Key> filterable) {
     this.mergedBlacklist = mergedBlacklist;
+  }
+
+  public Filterable<Key> getBlacklist() {
+    return blacklist;
   }
 }

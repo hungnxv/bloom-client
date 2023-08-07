@@ -1,0 +1,12 @@
+server.port: 8082
+
+spring:
+  activemq:
+    broker-url : tcp://localhost:61616
+    user: admin
+    password: admin
+
+company.name: companyB
+queue:
+  request: company_request
+  response: company_B_response
