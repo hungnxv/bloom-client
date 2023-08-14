@@ -1,6 +1,12 @@
 server.port: 8082
 
 spring:
+  datasource:
+    url: jdbc:postgresql://${DB_URL:localhost}:${DB_PORT:5432}/${DB_NAME:bloom_client_A}
+    username: ${DB_LOGIN:postgres}
+    password: ${DB_PASSWORD:postgres}
+    hikari:
+      maximum-pool-size: 10
   activemq:
     broker-url : tcp://localhost:61616
     user: admin
