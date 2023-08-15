@@ -11,7 +11,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "blacklist")
+@Table(name = "phone_blacklist")
 public class Blacklist implements Serializable {
   private static final long serialVersionUID = -6898807534187544624L;
 
