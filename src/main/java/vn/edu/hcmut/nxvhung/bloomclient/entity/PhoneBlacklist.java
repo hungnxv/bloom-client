@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "phone_blacklist")
-public class Blacklist implements Serializable {
+public class PhoneBlacklist implements Serializable {
   private static final long serialVersionUID = -6898807534187544624L;
 
   @Id
@@ -47,5 +47,29 @@ public class Blacklist implements Serializable {
 
   public void setPhoneNumber(String phoneNumber) {
     this.phoneNumber = phoneNumber;
+  }
+
+  public LocalDateTime getAddedTime() {
+    return addedTime;
+  }
+
+  public void setAddedTime(LocalDateTime addedTime) {
+    this.addedTime = addedTime;
+  }
+
+  public LocalDateTime getRemovedTime() {
+    return removedTime;
+  }
+
+  public void setRemovedTime(LocalDateTime removedTime) {
+    this.removedTime = removedTime;
+  }
+
+  public Boolean getDeleted() {
+    return deleted;
+  }
+
+  public void setDeleted(Boolean deleted) {
+    this.deleted = deleted;
   }
 }

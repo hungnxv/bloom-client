@@ -18,11 +18,9 @@ public class TestController {
   private String companyName;
   private BloomSender bloomSender;
 
-
   public TestController(BloomSender bloomSender){
     this.bloomSender = bloomSender;
   }
-
 
   @Autowired
   private BlacklistService blacklistService;

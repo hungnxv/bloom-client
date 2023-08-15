@@ -1,14 +1,19 @@
 package vn.edu.hcmut.nxvhung.bloomclient.service;
 
 import jakarta.annotation.PostConstruct;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ResourceUtils;
+import vn.edu.hcmut.nxvhung.bloomclient.entity.PhoneBlacklist;
+import vn.edu.hcmut.nxvhung.bloomclient.repository.PhoneBlacklistJpaRepository;
 import vn.edu.hcmut.nxvhung.bloomfilter.Filterable;
 import vn.edu.hcmut.nxvhung.bloomfilter.hash.Hash;
 import vn.edu.hcmut.nxvhung.bloomfilter.impl.Key;
@@ -20,6 +25,9 @@ public class BlacklistService {
   private Filterable<Key> blacklist;
 
   private Filterable<Key> mergedBlacklist;
+
+  @Autowired
+  private PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
 
   public void loadBlacklist() throws IOException {
     Integer count = null;
@@ -34,7 +42,7 @@ public class BlacklistService {
 
 }
 
-  @PostConstruct
+//  @PostConstruct
   public void init() throws IOException {
     blacklist = new MergeableCountingBloomFilter(479253, 10, Hash.MURMUR_HASH, 4);
     loadBlacklist();
@@ -51,5 +59,28 @@ public class BlacklistService {
 
   public Filterable<Key> getBlacklist() {
     return blacklist;
+  }
+
+  public PhoneBlacklist add(String phone, LocalDateTime expiredTime) {
+    PhoneBlacklist phoneBlacklist = new PhoneBlacklist();
+    phoneBlacklist.setPhoneNumber(phone);
+    phoneBlacklist.setAddedTime(LocalDateTime.now());
+    phoneBlacklist.setRemovedTime(expiredTime);
+    mergedBlacklist.add(Key.of(phone));
+    return phoneBlacklistJpaRepository.save(phoneBlacklist);
+  }
+
+  public boolean remove(String phone) {
+    PhoneBlacklist blacklist = phoneBlacklistJpaRepository.findByPhoneNumber(phone);
+    if(Objects.isNull(blacklist)) {
+      return false;
+    }
+
+    blacklist.setRemovedTime(LocalDateTime.now());
+    blacklist.setDeleted(true);
+    phoneBlacklistJpaRepository.save(blacklist);
+    mergedBlacklist.delete(Key.of(phone));
+    return true;
+
   }
 }

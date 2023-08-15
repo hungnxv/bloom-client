@@ -12,7 +12,7 @@ spring:
     user: admin
     password: admin
 
-company.name: companyA
+company.name: company_A
 queue:
   request: company_request
   response: company_A_response
