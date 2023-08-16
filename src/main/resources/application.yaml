@@ -16,3 +16,6 @@ company.name: company_A
 queue:
   request: company_request
   response: company_A_response
+
+bloom:
+  vector-size : 479253

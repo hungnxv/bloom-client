@@ -2,27 +2,26 @@ package vn.edu.hcmut.nxvhung.bloomclient.rest;
 
 
 import java.io.IOException;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import vn.edu.hcmut.nxvhung.bloomclient.dto.BlacklistDto;
 import vn.edu.hcmut.nxvhung.bloomclient.service.BlacklistService;
-import vn.edu.hcmut.nxvhung.bloomfilter.dto.Message;
 
 @RestController
 @RequestMapping(value = "/api/v1/blacklist")
+@RequiredArgsConstructor
 public class BlacklistController {
 
   private final BlacklistService blacklistService;
 
-  public BlacklistController(BlacklistService blacklistService) {
-    this.blacklistService = blacklistService;
-  }
-
   @PostMapping
-  public boolean add(String phone) {
-    blacklistService.add(phone, null);
+  public boolean add(@RequestBody BlacklistDto blacklistDto) {
+    blacklistService.add(blacklistDto.getPhone(), blacklistDto.getExpiredDate());
     return true;
   }
 
@@ -35,7 +34,7 @@ public class BlacklistController {
   @GetMapping("/init")
   public String init() throws IOException {
     blacklistService.init();
-    return "OK";
+    return "Blacklist are importing";
   }
 
 }

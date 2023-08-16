@@ -1,17 +1,19 @@
 package vn.edu.hcmut.nxvhung.bloomclient.service;
 
-import jakarta.annotation.PostConstruct;
-import java.time.LocalDateTime;
-import java.util.List;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Arrays;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Objects;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.ResourceUtils;
+import vn.edu.hcmut.nxvhung.bloomclient.dto.BlacklistDto;
 import vn.edu.hcmut.nxvhung.bloomclient.entity.PhoneBlacklist;
 import vn.edu.hcmut.nxvhung.bloomclient.repository.PhoneBlacklistJpaRepository;
 import vn.edu.hcmut.nxvhung.bloomfilter.Filterable;
@@ -20,21 +22,23 @@ import vn.edu.hcmut.nxvhung.bloomfilter.impl.Key;
 import vn.edu.hcmut.nxvhung.bloomfilter.impl.MergeableCountingBloomFilter;
 
 @Service
+@RequiredArgsConstructor
 public class BlacklistService {
 
+  DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
   private Filterable<Key> blacklist;
 
   private Filterable<Key> mergedBlacklist;
 
-  @Autowired
-  private PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
+  @Value("${bloom.vector-size}")
+  private int vectorSize;
+  private final PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
 
   public void loadBlacklist() throws IOException {
-    Integer count = null;
     try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:blacklist1.csv").toPath())) {
-      List<String> blacklistSource = reader.lines().skip(1).map(line -> line.replaceAll("\\W", "")).toList();
+      List<BlacklistDto> blacklistSource = reader.lines().skip(1).map(this::toBlacklistDto).toList();
       for(int i = 0 ; i < blacklistSource.size() - 1; i++){
-        String phone = blacklistSource.get(i);
+        String phone = blacklistSource.get(i).getPhone();
         blacklist.add(Key.of(phone));
         System.out.println(i + ": " +  phone + " added: ");
       }
@@ -42,9 +46,16 @@ public class BlacklistService {
 
 }
 
+  private BlacklistDto toBlacklistDto(String line) {
+    String[] row = line.split("[;,]");
+
+    return new BlacklistDto(row[0], LocalDate.parse(row[1].replaceAll("\\W", ""), formatter).atStartOfDay());
+  }
+
 //  @PostConstruct
+  @Async
   public void init() throws IOException {
-    blacklist = new MergeableCountingBloomFilter(479253, 10, Hash.MURMUR_HASH, 4);
+    blacklist = new MergeableCountingBloomFilter(vectorSize, 10, Hash.MURMUR_HASH, 4);
     loadBlacklist();
   }
 
