@@ -1,5 +1,7 @@
 package vn.edu.hcmut.nxvhung.bloomclient.service;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.transaction.Transactional;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -7,11 +9,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ResourceUtils;
 import vn.edu.hcmut.nxvhung.bloomclient.dto.BlacklistDto;
 import vn.edu.hcmut.nxvhung.bloomclient.entity.PhoneBlacklist;
@@ -23,6 +26,7 @@ import vn.edu.hcmut.nxvhung.bloomfilter.impl.MergeableCountingBloomFilter;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BlacklistService {
 
   DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
@@ -40,7 +44,9 @@ public class BlacklistService {
       for(int i = 0 ; i < blacklistSource.size() - 1; i++){
         String phone = blacklistSource.get(i).getPhone();
         blacklist.add(Key.of(phone));
-        System.out.println(i + ": " +  phone + " added: ");
+        phoneBlacklistJpaRepository.save(
+            PhoneBlacklist.builder().addedTime(LocalDateTime.now()).deleted(false).phoneNumber(phone).expiredTime(blacklistSource.get(i).getExpiredDate()).build());
+        log.info("{}: {} added: ", i, phone);
       }
     }
 
@@ -49,14 +55,24 @@ public class BlacklistService {
   private BlacklistDto toBlacklistDto(String line) {
     String[] row = line.split("[;,]");
 
-    return new BlacklistDto(row[0], LocalDate.parse(row[1].replaceAll("\\W", ""), formatter).atStartOfDay());
+    return new BlacklistDto(row[0].replaceAll("\\W", ""), LocalDate.parse(row[1], formatter).atStartOfDay());
   }
 
-//  @PostConstruct
-  @Async
-  public void init() throws IOException {
+  @PostConstruct
+  public void init() {
     blacklist = new MergeableCountingBloomFilter(vectorSize, 10, Hash.MURMUR_HASH, 4);
+  }
+  @Async
+  @Transactional
+  public void initFromFile() throws IOException {
     loadBlacklist();
+  }
+
+  @Async
+  @Transactional
+  public void initFromDatabase() throws IOException {
+    phoneBlacklistJpaRepository.findActiveBlacklists().forEach(phoneBlacklist -> blacklist.add(Key.of(phoneBlacklist.getPhoneNumber())));
+    log.info("Blacklist are imported");
   }
 
   public boolean existInBlacklist(String phone) {
@@ -65,7 +81,7 @@ public class BlacklistService {
   }
 
   public synchronized void updateMergedBlacklist(Filterable<Key> filterable) {
-    this.mergedBlacklist = mergedBlacklist;
+    this.mergedBlacklist = filterable;
   }
 
   public Filterable<Key> getBlacklist() {
@@ -76,22 +92,22 @@ public class BlacklistService {
     PhoneBlacklist phoneBlacklist = new PhoneBlacklist();
     phoneBlacklist.setPhoneNumber(phone);
     phoneBlacklist.setAddedTime(LocalDateTime.now());
-    phoneBlacklist.setRemovedTime(expiredTime);
-    mergedBlacklist.add(Key.of(phone));
+    phoneBlacklist.setExpiredTime(expiredTime);
+    blacklist.add(Key.of(phone));
     return phoneBlacklistJpaRepository.save(phoneBlacklist);
   }
 
   public boolean remove(String phone) {
-    PhoneBlacklist blacklist = phoneBlacklistJpaRepository.findByPhoneNumber(phone);
-    if(Objects.isNull(blacklist)) {
+    List<PhoneBlacklist> phoneBlacklists = phoneBlacklistJpaRepository.findByPhoneNumberAndDeletedIsFalse(phone);
+    if(CollectionUtils.isEmpty(phoneBlacklists)) {
       return false;
     }
-
-    blacklist.setRemovedTime(LocalDateTime.now());
-    blacklist.setDeleted(true);
-    phoneBlacklistJpaRepository.save(blacklist);
-    mergedBlacklist.delete(Key.of(phone));
+    for(PhoneBlacklist phoneBlacklist : phoneBlacklists) {
+      phoneBlacklist.setExpiredTime(LocalDateTime.now());
+      phoneBlacklist.setDeleted(true);
+      phoneBlacklistJpaRepository.save(phoneBlacklist);
+      blacklist.delete(Key.of(phone));
+    }
     return true;
-
   }
 }

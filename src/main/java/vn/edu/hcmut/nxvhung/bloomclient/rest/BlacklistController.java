@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import vn.edu.hcmut.nxvhung.bloomclient.dto.BlacklistDto;
 import vn.edu.hcmut.nxvhung.bloomclient.service.BlacklistService;
@@ -26,15 +27,22 @@ public class BlacklistController {
   }
 
   @DeleteMapping
-  public boolean remove(String phone) {
+  public boolean remove(@RequestParam  String phone) {
     return blacklistService.remove(phone);
   }
 
 
-  @GetMapping("/init")
+  @GetMapping("/file/init")
   public String init() throws IOException {
-    blacklistService.init();
-    return "Blacklist are importing";
+    blacklistService.initFromFile();
+    return "Blacklists are being imported";
   }
+
+  @GetMapping("/db/init")
+  public String initFromDb() throws IOException {
+    blacklistService.initFromDatabase();
+    return "Blacklists are being imported";
+  }
+
 
 }
