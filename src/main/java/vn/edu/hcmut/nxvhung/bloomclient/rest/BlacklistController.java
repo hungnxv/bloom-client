@@ -39,9 +39,14 @@ public class BlacklistController {
   }
 
   @GetMapping("/db/init")
-  public String initFromDb() throws IOException {
+  public String initFromDb() {
     blacklistService.initFromDatabase();
     return "Blacklists are being imported";
+  }
+
+  @GetMapping("/mayExist")
+  public boolean mayExist(@RequestParam("phone") String phone)  {
+    return blacklistService.mayExist(phone);
   }
 
 

@@ -16,7 +16,7 @@ public class EventListener {
     this.blacklistService = blacklistService;
   }
 
-  @JmsListener(destination = "company_A_response")
+  @JmsListener(destination = "${queue.response}")
   public void receiveMessage(final Message message) throws JMSException {
     blacklistService.updateMergedBlacklist(message.getBlacklist());
   }

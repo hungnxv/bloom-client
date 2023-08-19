@@ -9,17 +9,21 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ResourceUtils;
 import vn.edu.hcmut.nxvhung.bloomclient.dto.BlacklistDto;
 import vn.edu.hcmut.nxvhung.bloomclient.entity.PhoneBlacklist;
 import vn.edu.hcmut.nxvhung.bloomclient.repository.PhoneBlacklistJpaRepository;
+import vn.edu.hcmut.nxvhung.bloomclient.sender.BloomSender;
 import vn.edu.hcmut.nxvhung.bloomfilter.Filterable;
+import vn.edu.hcmut.nxvhung.bloomfilter.dto.Message;
 import vn.edu.hcmut.nxvhung.bloomfilter.hash.Hash;
 import vn.edu.hcmut.nxvhung.bloomfilter.impl.Key;
 import vn.edu.hcmut.nxvhung.bloomfilter.impl.MergeableCountingBloomFilter;
@@ -34,8 +38,13 @@ public class BlacklistService {
 
   private Filterable<Key> mergedBlacklist;
 
+  private final BloomSender bloomSender;
+  private Integer timestamp;
+
   @Value("${bloom.vector-size}")
   private int vectorSize;
+  @Value("${company.name}")
+  private String companyName;
   private final PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
 
   public void loadBlacklist() throws IOException {
@@ -60,6 +69,7 @@ public class BlacklistService {
 
   @PostConstruct
   public void init() {
+    timestamp = 0;
     blacklist = new MergeableCountingBloomFilter(vectorSize, 10, Hash.MURMUR_HASH, 4);
   }
   @Async
@@ -70,7 +80,7 @@ public class BlacklistService {
 
   @Async
   @Transactional
-  public void initFromDatabase() throws IOException {
+  public void initFromDatabase()  {
     phoneBlacklistJpaRepository.findActiveBlacklists().forEach(phoneBlacklist -> blacklist.add(Key.of(phoneBlacklist.getPhoneNumber())));
     log.info("Blacklist are imported");
   }
@@ -109,5 +119,20 @@ public class BlacklistService {
       blacklist.delete(Key.of(phone));
     }
     return true;
+  }
+
+  @Scheduled(cron =  "0 * * * *")
+  public void sendUpdatedBlacklist() {
+    Message message = new Message();
+    message.setBlacklist(blacklist);
+    timestamp++;
+    message.setTimestamp(timestamp);
+    message.setCompanyName(companyName);
+    bloomSender.sendMessage(message);
+  }
+
+  public boolean mayExist(String phone) {
+    Key key = Key.of(phone);
+    return blacklist.mayExists(key) || Objects.nonNull(mergedBlacklist) && mergedBlacklist.mayExists(key);
   }
 }

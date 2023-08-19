@@ -2,14 +2,10 @@ package vn.edu.hcmut.nxvhung.bloomclient.rest;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import vn.edu.hcmut.nxvhung.bloomclient.service.BlacklistService;
-import vn.edu.hcmut.nxvhung.bloomfilter.dto.Message;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import vn.edu.hcmut.nxvhung.bloomclient.sender.BloomSender;
-import vn.edu.hcmut.nxvhung.bloomfilter.hash.Hash;
-import vn.edu.hcmut.nxvhung.bloomfilter.impl.Key;
-import vn.edu.hcmut.nxvhung.bloomfilter.impl.MergeableCountingBloomFilter;
+import vn.edu.hcmut.nxvhung.bloomclient.service.BlacklistService;
 
 @RestController
 public class TestController {
@@ -25,12 +21,15 @@ public class TestController {
   @Autowired
   private BlacklistService blacklistService;
   @GetMapping("/test")
-  public String test() {
+  public String test()  {
 //    MergeableCountingBloomFilter bloomFilter = new MergeableCountingBloomFilter(479253, 10, Hash.MURMUR_HASH, 4);
 
-    Message message = new Message(1, blacklistService.getBlacklist());
-    message.setCompanyName(companyName);
-    bloomSender.sendMessage(message);
+//    Message message = new Message(1, blacklistService.getBlacklist());
+//    message.setCompanyName(companyName);
+//    bloomSender.sendMessage(message);
+
+    blacklistService.initFromDatabase();
+    blacklistService.sendUpdatedBlacklist();
     return "OK";
   }
 
