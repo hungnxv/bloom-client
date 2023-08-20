@@ -48,7 +48,7 @@ public class BlacklistService {
   private final PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
 
   public void loadBlacklist() throws IOException {
-    try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:blacklist1.csv").toPath())) {
+    try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:companyE.csv").toPath())) {
       List<BlacklistDto> blacklistSource = reader.lines().skip(1).map(this::toBlacklistDto).toList();
       for(int i = 0 ; i < blacklistSource.size() - 1; i++){
         String phone = blacklistSource.get(i).getPhone();
