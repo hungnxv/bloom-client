@@ -11,6 +11,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
@@ -35,7 +36,6 @@ public class BlacklistService {
 
   DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
   private Filterable<Key> blacklist;
-
   private Filterable<Key> mergedBlacklist;
 
   private final BloomSender bloomSender;
@@ -46,6 +46,7 @@ public class BlacklistService {
   @Value("${company.name}")
   private String companyName;
   private final PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
+
 
   public void loadBlacklist() throws IOException {
     try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:companyE.csv").toPath())) {
@@ -71,6 +72,7 @@ public class BlacklistService {
   public void init() {
     timestamp = 0;
     blacklist = new MergeableCountingBloomFilter(vectorSize, 10, Hash.MURMUR_HASH, 4);
+    initFromDatabase();
   }
   @Async
   @Transactional
@@ -90,7 +92,8 @@ public class BlacklistService {
     return blacklist.mayExists(key) && blacklist.mayExists(key);
   }
 
-  public synchronized void updateMergedBlacklist(Filterable<Key> filterable) {
+  @Synchronized
+  public void updateMergedBlacklist(Filterable<Key> filterable) {
     this.mergedBlacklist = filterable;
   }
 
@@ -104,6 +107,7 @@ public class BlacklistService {
     phoneBlacklist.setAddedTime(LocalDateTime.now());
     phoneBlacklist.setExpiredTime(expiredTime);
     blacklist.add(Key.of(phone));
+    log.info("{}: add phone {} to blacklist.", companyName, phone);
     return phoneBlacklistJpaRepository.save(phoneBlacklist);
   }
 
@@ -118,16 +122,20 @@ public class BlacklistService {
       phoneBlacklistJpaRepository.save(phoneBlacklist);
       blacklist.delete(Key.of(phone));
     }
+    log.info("{}: remove phone {} from blacklist.", companyName, phone);
+
     return true;
   }
 
-  @Scheduled(cron =  "0 * * * *")
+  @Scheduled(cron =  "0 0 * * * *")
   public void sendUpdatedBlacklist() {
     Message message = new Message();
     message.setBlacklist(blacklist);
     timestamp++;
     message.setTimestamp(timestamp);
     message.setCompanyName(companyName);
+    log.info("{}: send blacklist to bloom-server.", companyName);
+
     bloomSender.sendMessage(message);
   }
 

@@ -44,6 +44,12 @@ public class BlacklistController {
     return "Blacklists are being imported";
   }
 
+  @GetMapping("/sendUpdatedBlacklist")
+  public String sendBlacklist() {
+    blacklistService.sendUpdatedBlacklist();
+    return "Blacklists are being imported";
+  }
+
   @GetMapping("/mayExist")
   public boolean mayExist(@RequestParam("phone") String phone)  {
     return blacklistService.mayExist(phone);
