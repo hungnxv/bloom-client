@@ -3,6 +3,7 @@ package vn.edu.hcmut.nxvhung.bloomclient.rest;
 
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,6 +17,7 @@ import vn.edu.hcmut.nxvhung.bloomclient.service.BlacklistService;
 @RestController
 @RequestMapping(value = "/api/v1/blacklist")
 @RequiredArgsConstructor
+@Slf4j
 public class BlacklistController {
 
   private final BlacklistService blacklistService;
@@ -47,13 +49,12 @@ public class BlacklistController {
   @GetMapping("/sendUpdatedBlacklist")
   public String sendBlacklist() {
     blacklistService.sendUpdatedBlacklist();
-    return "Blacklists are being imported";
+    return "Blacklists are being sent to Bloom server";
   }
 
   @GetMapping("/mayExist")
   public boolean mayExist(@RequestParam("phone") String phone)  {
     return blacklistService.mayExist(phone);
   }
-
 
 }

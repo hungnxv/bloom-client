@@ -77,6 +77,7 @@ public class BlacklistService {
   @Async
   @Transactional
   public void initFromFile() throws IOException {
+    log.info("Blacklists are being imported");
     loadBlacklist();
   }
 
@@ -84,7 +85,7 @@ public class BlacklistService {
   @Transactional
   public void initFromDatabase()  {
     phoneBlacklistJpaRepository.findActiveBlacklists().forEach(phoneBlacklist -> blacklist.add(Key.of(phoneBlacklist.getPhoneNumber())));
-    log.info("Blacklist are imported");
+    log.info("Blacklist are imported from database");
   }
 
   public boolean existInBlacklist(String phone) {
@@ -140,6 +141,7 @@ public class BlacklistService {
   }
 
   public boolean mayExist(String phone) {
+    log.info("Check phone number {} may exist in blacklist", phone);
     Key key = Key.of(phone);
     return blacklist.mayExists(key) || Objects.nonNull(mergedBlacklist) && mergedBlacklist.mayExists(key);
   }
