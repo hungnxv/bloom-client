@@ -41,6 +41,8 @@ public class BlacklistService {
   private final BloomSender bloomSender;
   private Integer timestamp;
 
+  private final RedisService redisService;
+
   @Value("${bloom.vector-size}")
   private int vectorSize;
   @Value("${company.name}")
@@ -73,18 +75,21 @@ public class BlacklistService {
     timestamp = 0;
     blacklist = new MergeableCountingBloomFilter(vectorSize, 10, Hash.MURMUR_HASH, 4);
     initFromDatabase();
+
   }
   @Async
   @Transactional
   public void initFromFile() throws IOException {
     log.info("Blacklists are being imported");
     loadBlacklist();
+    redisService.saveCompanyBlackList(blacklist);
   }
 
   @Async
   @Transactional
   public void initFromDatabase()  {
     phoneBlacklistJpaRepository.findActiveBlacklists().forEach(phoneBlacklist -> blacklist.add(Key.of(phoneBlacklist.getPhoneNumber())));
+    redisService.saveCompanyBlackList(blacklist);
     log.info("Blacklist are imported from database");
   }
 
@@ -96,6 +101,7 @@ public class BlacklistService {
   @Synchronized
   public void updateMergedBlacklist(Filterable<Key> filterable) {
     this.mergedBlacklist = filterable;
+    redisService.saveMergedBlacklist(mergedBlacklist);
   }
 
   public Filterable<Key> getBlacklist() {
@@ -108,6 +114,7 @@ public class BlacklistService {
     phoneBlacklist.setAddedTime(LocalDateTime.now());
     phoneBlacklist.setExpiredTime(expiredTime);
     blacklist.add(Key.of(phone));
+    redisService.saveCompanyBlackList(blacklist);
     log.info("{}: add phone {} to blacklist.", companyName, phone);
     return phoneBlacklistJpaRepository.save(phoneBlacklist);
   }
@@ -123,6 +130,7 @@ public class BlacklistService {
       phoneBlacklistJpaRepository.save(phoneBlacklist);
       blacklist.delete(Key.of(phone));
     }
+    redisService.saveCompanyBlackList(blacklist);
     log.info("{}: remove phone {} from blacklist.", companyName, phone);
 
     return true;
@@ -144,5 +152,12 @@ public class BlacklistService {
     log.info("Check phone number {} may exist in blacklist", phone);
     Key key = Key.of(phone);
     return blacklist.mayExists(key) || Objects.nonNull(mergedBlacklist) && mergedBlacklist.mayExists(key);
+  }
+
+  public void test() {
+//    redisService.saveBlackList(blacklist);
+//    Filterable<Key> hung = redisService.get();
+//    redisService.increaseTimestamp();
+//    log.info(String.valueOf(redisService.getTimestamp()));
   }
 }

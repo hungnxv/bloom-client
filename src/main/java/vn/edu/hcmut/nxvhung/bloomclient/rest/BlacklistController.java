@@ -57,4 +57,11 @@ public class BlacklistController {
     return blacklistService.mayExist(phone);
   }
 
+  @GetMapping("/test")
+  public boolean kaka()  {
+     blacklistService.test();
+     return true;
+  }
+
+
 }
