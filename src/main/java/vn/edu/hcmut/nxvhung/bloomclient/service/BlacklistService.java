@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ResourceUtils;
+import org.springframework.web.multipart.MultipartFile;
 import vn.edu.hcmut.nxvhung.bloomclient.dto.BlacklistDto;
 import vn.edu.hcmut.nxvhung.bloomclient.entity.PhoneBlacklist;
 import vn.edu.hcmut.nxvhung.bloomclient.repository.PhoneBlacklistJpaRepository;
@@ -34,7 +36,8 @@ import vn.edu.hcmut.nxvhung.bloomfilter.impl.MergeableCountingBloomFilter;
 @Slf4j
 public class BlacklistService {
 
-  DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+  private static final String FILE_PATTERN = "classpath:company%S.csv";
+  private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
   private Filterable<Key> blacklist;
   private Filterable<Key> mergedBlacklist;
 
@@ -43,26 +46,35 @@ public class BlacklistService {
 
   private final RedisService redisService;
 
+
   @Value("${bloom.vector-size}")
   private int vectorSize;
   @Value("${company.name}")
   private String companyName;
+
+  @Value("${spring.profiles.active}")
+  private String activeProfile;
+
   private final PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
 
 
-  public void loadBlacklist() throws IOException {
-    try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:companyE.csv").toPath())) {
-      List<BlacklistDto> blacklistSource = reader.lines().skip(1).map(this::toBlacklistDto).toList();
-      for(int i = 0 ; i < blacklistSource.size() - 1; i++){
-        String phone = blacklistSource.get(i).getPhone();
-        blacklist.add(Key.of(phone));
-        phoneBlacklistJpaRepository.save(
-            PhoneBlacklist.builder().addedTime(LocalDateTime.now()).deleted(false).phoneNumber(phone).expiredTime(blacklistSource.get(i).getExpiredDate()).build());
-        log.info("{}: {} added: ", i, phone);
-      }
+  public void loadInitBlacklist() throws IOException {
+    try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile(String.format(FILE_PATTERN, activeProfile)).toPath())) {
+      loadInitBlacklist(reader);
     }
 
 }
+
+  private void loadInitBlacklist(BufferedReader reader) {
+    List<BlacklistDto> blacklistSource = reader.lines().skip(1).map(this::toBlacklistDto).toList();
+    for(int i = 0 ; i < blacklistSource.size() - 1; i++){
+      String phone = blacklistSource.get(i).getPhone();
+      blacklist.add(Key.of(phone));
+      phoneBlacklistJpaRepository.save(
+          PhoneBlacklist.builder().addedTime(LocalDateTime.now()).deleted(false).phoneNumber(phone).expiredTime(blacklistSource.get(i).getExpiredDate()).build());
+      log.info("{}: {} added ", i, phone);
+    }
+  }
 
   private BlacklistDto toBlacklistDto(String line) {
     String[] row = line.split("[;,]");
@@ -81,7 +93,16 @@ public class BlacklistService {
   @Transactional
   public void initFromFile() throws IOException {
     log.info("Blacklists are being imported");
-    loadBlacklist();
+    loadInitBlacklist();
+    redisService.saveCompanyBlackList(blacklist);
+  }
+
+  @Transactional
+  public void uploadFile(MultipartFile multipartFile) throws IOException {
+    log.info("Blacklists are being imported");
+    try(BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(multipartFile.getInputStream()))) {
+      loadInitBlacklist(bufferedReader);
+    }
     redisService.saveCompanyBlackList(blacklist);
   }
 
