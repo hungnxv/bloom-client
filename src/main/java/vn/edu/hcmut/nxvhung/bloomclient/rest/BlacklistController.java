@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import vn.edu.hcmut.nxvhung.bloomclient.dto.BlacklistDto;
 import vn.edu.hcmut.nxvhung.bloomclient.service.BlacklistService;
 
@@ -63,5 +64,10 @@ public class BlacklistController {
      return true;
   }
 
+  @PostMapping("/upload")
+  public String upload(@RequestParam("file") MultipartFile multipartFile) throws IOException {
+    blacklistService.uploadFile(multipartFile);
+    return "Blacklist has been uploaded";
+  }
 
 }
