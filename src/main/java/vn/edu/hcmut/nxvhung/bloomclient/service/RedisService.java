@@ -1,11 +1,13 @@
 package vn.edu.hcmut.nxvhung.bloomclient.service;
 
 import jakarta.annotation.PostConstruct;
+import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.stereotype.Service;
 import vn.edu.hcmut.nxvhung.bloomfilter.Filterable;
@@ -22,18 +24,23 @@ public class RedisService {
   private static final String COMPANY_BLACKLIST_HASH_KEY = "%s_COMPANY_BLACKLIST";
 
   private static final String TIMESTAMP_HASH_KEY = "%s_TIMESTAMP";
-
+  private static final String TIMESTAMP_VECTOR = "TIMESTAMP_VECTOR";
+  private final StringRedisTemplate springRedisTemplate;
 
   private final RedisTemplate<Object, Object> redisTemplate;
 
   private HashOperations<Object, String, Filterable<Key>> hashOperations;
+  private HashOperations<Object, String, Map> timestampVectorOperations;
 
-  private ValueOperations<Object, Object> timestampOperation;
+
+  private ValueOperations<String, String> timestampOperation;
+
 
   @PostConstruct
   public void init() {
     hashOperations = redisTemplate.opsForHash();
-    timestampOperation = redisTemplate.opsForValue();
+    timestampVectorOperations = redisTemplate.opsForHash();
+    timestampOperation = springRedisTemplate.opsForValue();
 
   }
 
@@ -45,10 +52,15 @@ public class RedisService {
     hashOperations.put(HASH_KEY,String.format(MERGE_BLACKLIST_HASH_KEY, companyName), blacklist);
   }
 
+  public void saveTimestampVector(Map<String, Integer> timestampsMap) {
+    timestampVectorOperations.put(HASH_KEY, TIMESTAMP_VECTOR, timestampsMap);
+  }
+
   public void increaseTimestamp() {
     String key = String.format(TIMESTAMP_HASH_KEY, companyName);
     if(Objects.isNull(timestampOperation.get(key))) {
-      timestampOperation.set(key, 0);
+      timestampOperation.set(key, "11");
+      timestampOperation.increment(key, -10);
     } else {
       timestampOperation.increment(key) ;
     }
@@ -56,7 +68,7 @@ public class RedisService {
   }
 
   public Integer getTimestamp() {
-    return (Integer) timestampOperation.get(TIMESTAMP_HASH_KEY) ;
+    return Integer.parseInt(timestampOperation.get(TIMESTAMP_HASH_KEY)) ;
   }
 
 }

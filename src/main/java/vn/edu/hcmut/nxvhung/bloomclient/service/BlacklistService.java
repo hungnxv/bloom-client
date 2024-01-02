@@ -9,7 +9,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.Synchronized;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +43,7 @@ public class BlacklistService {
 
   private final BloomSender bloomSender;
   private Integer timestamp;
+  private final Map<String, Integer> timestampVector = new ConcurrentHashMap<>();
 
   private final RedisService redisService;
 
@@ -48,7 +52,6 @@ public class BlacklistService {
   @Value("${company.name}")
   private String companyName;
   private final PhoneBlacklistJpaRepository phoneBlacklistJpaRepository;
-
 
   public void loadBlacklist() throws IOException {
     try (BufferedReader reader = Files.newBufferedReader(ResourceUtils.getFile("classpath:companyE.csv").toPath())) {
@@ -66,7 +69,6 @@ public class BlacklistService {
 
   private BlacklistDto toBlacklistDto(String line) {
     String[] row = line.split("[;,]");
-
     return new BlacklistDto(row[0].replaceAll("\\W", ""), LocalDate.parse(row[1], formatter).atStartOfDay());
   }
 
@@ -99,8 +101,22 @@ public class BlacklistService {
   }
 
   @Synchronized
-  public void updateMergedBlacklist(Filterable<Key> filterable) {
-    this.mergedBlacklist = filterable;
+  public void handleBFSUpdate(Message message) {
+    Integer updatedBsfTimestamp = message.getTimestampVector().getOrDefault("BFS", 0);
+
+    Integer currentBsfTimestamp = timestampVector.getOrDefault("BFS", 0);
+    if(updatedBsfTimestamp < currentBsfTimestamp) {
+      log.warn("No update, The incoming message is out of dated, Message BSF timestamp{}, current BSF timestamp: {} ", updatedBsfTimestamp, currentBsfTimestamp);
+      return;
+    }
+    this.mergedBlacklist = message.getBlacklist();
+    for(Entry<String, Integer> entry : message.getTimestampVector().entrySet()) {
+      Integer ourTimestamp = timestampVector.getOrDefault(entry.getKey(), 0);
+      if(ourTimestamp < entry.getValue()) {
+        timestampVector.put(entry.getKey(), entry.getValue());
+      }
+    }
+    redisService.saveTimestampVector(timestampVector);
     redisService.saveMergedBlacklist(mergedBlacklist);
   }
 
@@ -141,6 +157,7 @@ public class BlacklistService {
     Message message = new Message();
     message.setBlacklist(blacklist);
     timestamp++;
+    redisService.increaseTimestamp();
     message.setTimestamp(timestamp);
     message.setCompanyName(companyName);
     log.info("{}: send blacklist to bloom-server.", companyName);
