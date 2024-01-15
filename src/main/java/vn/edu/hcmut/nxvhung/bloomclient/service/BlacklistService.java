@@ -183,7 +183,7 @@ public class BlacklistService {
     redisService.increaseTimestamp();
     message.setTimestamp(timestamp);
     message.setCompanyName(companyName);
-    log.info("{}: send blacklist to bloom-server.", companyName);
+    log.info("{}: send blacklist to bloom-server. Timestamp: {}.", companyName, timestamp);
 
     bloomSender.sendMessage(message);
   }
