@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct;
 import java.util.Map;
 import java.util.Objects;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.HashOperations;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -24,7 +25,7 @@ public class RedisService {
   private static final String COMPANY_BLACKLIST_HASH_KEY = "%s_COMPANY_BLACKLIST";
 
   private static final String TIMESTAMP_HASH_KEY = "%s_TIMESTAMP";
-  private static final String TIMESTAMP_VECTOR = "TIMESTAMP_VECTOR";
+  private static final String TIMESTAMP_VECTOR = "%s_TIMESTAMP_VECTOR";
   private final StringRedisTemplate springRedisTemplate;
 
   private final RedisTemplate<Object, Object> redisTemplate;
@@ -53,7 +54,7 @@ public class RedisService {
   }
 
   public void saveTimestampVector(Map<String, Integer> timestampsMap) {
-    timestampVectorOperations.put(HASH_KEY, TIMESTAMP_VECTOR, timestampsMap);
+    timestampVectorOperations.put(HASH_KEY, String.format(TIMESTAMP_VECTOR, companyName), timestampsMap);
   }
 
   public void increaseTimestamp() {
@@ -68,7 +69,16 @@ public class RedisService {
   }
 
   public Integer getTimestamp() {
-    return Integer.parseInt(timestampOperation.get(TIMESTAMP_HASH_KEY)) ;
+    String timestampAsString = timestampOperation.get(String.format(TIMESTAMP_HASH_KEY, companyName));
+    return StringUtils.isBlank(timestampAsString) ? null : Integer.parseInt(timestampAsString) ;
+  }
+
+  public Filterable<Key> getMergedBlacklist () {
+    return hashOperations.get(HASH_KEY,String.format(MERGE_BLACKLIST_HASH_KEY, companyName));
+  }
+
+  public Map<String, Integer> getTimestampsMap() {
+    return timestampVectorOperations.get(HASH_KEY, String.format(TIMESTAMP_VECTOR, companyName));
   }
 
 }

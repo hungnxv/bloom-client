@@ -46,7 +46,7 @@ public class BlacklistService {
 
   private final BloomSender bloomSender;
   private Integer timestamp;
-  private final Map<String, Integer> timestampVector = new ConcurrentHashMap<>();
+  private Map<String, Integer> timestampVector = new ConcurrentHashMap<>();
 
   private final RedisService redisService;
 
@@ -91,6 +91,19 @@ public class BlacklistService {
     timestamp = 0;
     blacklist = new MergeableCountingBloomFilter(vectorSize, 10, Hash.MURMUR_HASH, 4);
     initFromDatabase();
+    Filterable<Key> savedBlacklist = redisService.getMergedBlacklist();
+    if (Objects.nonNull(savedBlacklist)) {
+      mergedBlacklist = savedBlacklist;
+    }
+    Integer savedTimestamp = redisService.getTimestamp();
+    if(Objects.nonNull(savedTimestamp)){
+      timestamp = savedTimestamp;
+    }
+
+    Map<String, Integer>  savedTimestampsMap =  redisService.getTimestampsMap();
+    if(Objects.nonNull(savedTimestampsMap)) {
+      timestampVector = savedTimestampsMap;
+    }
 
   }
   @Async
